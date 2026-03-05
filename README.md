@@ -13,7 +13,7 @@
 ├──────────────────────────────────┤
 │ U3     Patch Panel + Brush Strip │
 ├──────────────────────────────────┤
-│ U4     TP-Link Switch (1U)       │
+│ U4     TP-Link Switch + JetKVM   │
 ├──────────────────────────────────┤
 │ U5     Lenovo M920q (1U)         │
 ├──────────────────────────────────┤
@@ -63,6 +63,7 @@ This homelab is designed for a college apartment with three hard constraints:
 - Photo backup (Immich — self-hosted Google Photos)
 - VPN for remote access (WireGuard)
 - Service monitoring (Uptime Kuma)
+- Remote KVM access to BIOS/boot (JetKVM)
 
 ---
 
@@ -127,6 +128,22 @@ M920q                          3D Printed HDD Cage (U7-8)
 | **TP-Link TL-SG108** | 8-port unmanaged gigabit | $18 |
 | **GeeekPi Patch Panel** | 12-port CAT6, 0.5U | $16 |
 
+### Remote Management
+
+| Component | Specs | Price |
+|---|---|---|
+| **[JetKVM](https://jetkvm.com)** | KVM-over-IP, 1080p60, 30-60ms latency | $69 |
+
+The JetKVM gives you full remote BIOS-level access to the M920q — keyboard, video, and mouse over your network. Unlike SSH, this works even when the OS is down, during boot, in BIOS setup, or when Unraid is unresponsive. It's 43mm x 60mm x 31mm (smaller than a deck of cards) and sits next to the switch on the 1U shelf.
+
+- **Video:** Captures HDMI output at 1080p60 with H.264 encoding
+- **Input:** Emulates USB keyboard + mouse
+- **Access:** Local web UI or JetKVM Cloud (WebRTC) for access from anywhere
+- **Power:** USB-C (can be powered from the M920q or switch)
+- **Extras:** 1.69" touchscreen for local status, RJ11 port for ATX power control extension
+- **Software:** Fully open-source (Golang on Linux)
+- **3D printable rack mount:** [Printables #1179328](https://www.printables.com/model/1179328) — 10-inch mount with keystone slots
+
 ### Power
 
 | Component | Specs | Price |
@@ -154,54 +171,84 @@ The layout follows community best practices from [geerlingguy/mini-rack](https:/
 - Screen at the top (visible at desk eye level)
 
 ```
-GeeekPi 12U 10-Inch Rack (T2)
-260mm depth | 210mm safe width
+ GeeekPi 12U 10-Inch Rack (T2) — 260mm depth
+ _______________________________________________
+|                                               |
+|  U1  ┌─────────────────────────────────────┐  |
+|      |         7.84" Touch Screen          |  |
+|  U2  |         1280x400 LCD                |  |
+|      └─────────────────────────────────────┘  |
+|_______________________________________________|
+|                                               |
+|  U3  |  Patch Panel 12x CAT6   (0.5U)     |  |  <-- wall ethernet in
+|      |  ////// Brush Strip //// (0.5U)     |  |
+|_______________________________________________|
+|                                               |
+|  U4  | TL-SG108 Switch |    | JetKVM |     |  |  <-- on 1U shelf
+|_______________________________________________|
+|                                               |
+|  U5  ┌─────────────────────────────────────┐  |
+|      |  Lenovo M920q  ·  i5-8500T  · Unraid|  |  <-- SATA + HDMI rear
+|      |  ASM1166 in PCIe riser              |  |
+|      └─────────────────────────────────────┘  |
+|_______________________________________________|
+|                                               |
+|  U6  | Raspberry Pi 5 |      SBC Shelf      |  |  <-- AdGuard, WireGuard
+|_______________________________________________|
+|                                               |
+|  U7  ┌─────────────────────────────────────┐  |
+|      |  3D Printed HDD Cage               |  |  <-- SATA data from U5
+|  U8  |  WD Red Plus 4TB  x2               |  |  <-- 12V from power brick
+|      └─────────────────────────────────────┘  |
+|_______________________________________________|
+|                                               |
+|  U9  |          ( expansion )              |  |
+|_______________________________________________|
+|                                               |
+|  U10 |          ( expansion )              |  |
+|_______________________________________________|
+|                                               |
+|  U11 ┌─────────────────────────────────────┐  |
+|      |  Tupavco TP1713 PDU  · 4 outlets   |  |  <-- 6ft cord to UPS
+|      └─────────────────────────────────────┘  |
+|_______________________________________________|
+|                                               |
+|  U12 |       ( cable routing )             |  |
+|_______________________________________________|
+|                                               |
+|      ╔═════════════════════════════════════╗  |
+|  0U  ║  Tripp Lite BC600R  ·  600VA UPS   ║  |  <-- sits on rack floor
+|      ╚═════════════════════════════════════╝  |
+|_______________________________________________|
 
-         FRONT VIEW                              REAR VIEW
-┌────────────────────────────┐        ┌────────────────────────────┐
-│  ┌──────────────────────┐  │        │                            │
-│  │  7.84" Touch Screen  │  │  U1-2  │  HDMI + USB-C cables      │
-│  │  1280 x 400 LCD      │  │        │  route down to M920q      │
-│  └──────────────────────┘  │        │                            │
-├────────────────────────────┤        ├────────────────────────────┤
-│  [Patch Panel 12x CAT6]   │  U3    │  Wall ethernet entry       │
-│  [////Brush Strip/////]    │        │  via brush strip           │
-├────────────────────────────┤        ├────────────────────────────┤
-│  ┌──────────────────────┐  │        │                            │
-│  │ TP-Link TL-SG108     │  │  U4   │  Patch cables up to panel  │
-│  └──────────────────────┘  │        │                            │
-├────────────────────────────┤        ├────────────────────────────┤
-│  ┌──────────────────────┐  │        │  ┌──SATA cables──┐        │
-│  │  Lenovo M920q        │  │  U5   │  │  route down    │        │
-│  │  i5-8500T | Unraid   │  │        │  └───────────────┘        │
-│  └──────────────────────┘  │        │                            │
-├────────────────────────────┤        ├────────────────────────────┤
-│  ┌─────────┐               │        │                            │
-│  │  Pi 5   │  SBC Shelf    │  U6   │  Ethernet + USB-C power   │
-│  └─────────┘               │        │                            │
-├────────────────────────────┤        ├────────────────────────────┤
-│  ┌──────────────────────┐  │        │                            │
-│  │  HDD Cage            │  │  U7-8 │  SATA data from M920q     │
-│  │  2x WD Red Plus 4TB  │  │        │  12V power from brick     │
-│  └──────────────────────┘  │        │                            │
-├────────────────────────────┤        ├────────────────────────────┤
-│        (expansion)         │  U9   │                            │
-├────────────────────────────┤        ├────────────────────────────┤
-│        (expansion)         │  U10  │                            │
-├────────────────────────────┤        ├────────────────────────────┤
-│  ┌──────────────────────┐  │        │                            │
-│  │  Tupavco TP1713 PDU  │  │  U11  │  6ft cord exits to UPS    │
-│  └──────────────────────┘  │        │                            │
-├────────────────────────────┤        ├────────────────────────────┤
-│    (cable routing)         │  U12  │  Power cables route up     │
-├────────────────────────────┤        ├────────────────────────────┤
-│  ╔══════════════════════╗  │        │                            │
-│  ║ Tripp Lite BC600R    ║  │ FLOOR │  UPS sits below rails     │
-│  ║ 600VA UPS            ║  │  (0U) │  262mm W fits outer shell │
-│  ╚══════════════════════╝  │        │                            │
-└────────────────────────────┘        └────────────────────────────┘
+ U Budget: 10U used + 2U expansion
+ UPS: 0U (floor, below lowest rail)
+```
 
-U Budget: 10U used + 2U free | UPS: 0U (floor)
+**Cable routing summary:**
+
+```
+ REAR VIEW — Cable Paths
+ ________________________
+|                        |
+|  Screen  <── HDMI ──┐  |  U1-2
+|          <── USB-C ──┤  |
+|________________________|
+|  Patch Panel         |  |  U3     <-- wall ethernet enters here
+|________________________|
+|  Switch    JetKVM    |  |  U4     <-- short patches up to U3
+|________________________|
+|  M920q ──┐           |  |  U5     <-- HDMI/USB up, SATA down
+|          |           |  |
+|          | SATA x2   |  |         cables zip-tied to rear rail
+|          |           |  |
+|  HDD Cage <──────────┘  |  U7-8   <-- 12V power up from floor
+|________________________|
+|                        |
+|  PDU                 |  |  U11    <-- power cords route up rail
+|________________________|
+|  UPS  <── PDU cord      |  FLOOR
+|________________________|
 ```
 
 ### Cable Routing
@@ -210,8 +257,10 @@ U Budget: 10U used + 2U free | UPS: 0U (floor)
 |---|---|---|---|
 | SATA data (x2) | M920q rear (U5) | HDD cage (U7-8) | 12-18" |
 | Ethernet patches | Switch (U4) | Patch panel (U3) | 6-12" |
-| HDMI | M920q (U5) | Screen (U1-2) | ~3 ft |
-| USB-C | M920q (U5) | Screen (U1-2) | ~3 ft |
+| HDMI (screen) | M920q (U5) | Screen (U1-2) | ~3 ft |
+| HDMI (JetKVM) | M920q (U5) | JetKVM (U4) | ~1 ft |
+| USB-A (JetKVM) | M920q (U5) | JetKVM (U4) | ~1 ft |
+| USB-C (screen) | M920q (U5) | Screen (U1-2) | ~3 ft |
 | 12V DC | Power brick (floor) | HDD cage (U7-8) | ~4 ft |
 | Power cords | PDU (U11) | All devices | Routed up rear rail |
 
@@ -241,14 +290,14 @@ U Budget: 10U used + 2U free | UPS: 0U (floor)
          │      8-port gigabit (U4)            │
          └──┬──────────┬──────────┬────────────┘
             │          │          │
-     ┌──────┴───┐ ┌────┴────┐    │
-     │  M920q   │ │  Pi 5   │    │ (future devices)
-     │ .1.50    │ │ .1.51   │    │
-     │ Unraid   │ │ AdGuard │    │
-     │ Jellyfin │ │ WireGrd │    │
-     │ Sonarr   │ │ Uptime  │    │
-     │ Radarr   │ │ Kuma    │    │
-     └──────────┘ └─────────┘    │
+     ┌──────┴───┐ ┌────┴────┐ ┌──┴──────┐
+     │  M920q   │ │  Pi 5   │ │ JetKVM  │
+     │ .1.50    │ │ .1.51   │ │ .1.52   │
+     │ Unraid   │ │ AdGuard │ │ KVM/IP  │
+     │ Jellyfin │ │ WireGrd │ │ for     │
+     │ Sonarr   │ │ Uptime  │ │ M920q   │
+     │ Radarr   │ │ Kuma    │ │         │
+     └──────────┘ └─────────┘ └─────────┘
 
 WiFi Clients (via ISP Router):
   Phone ──► Jellyfin streaming (192.168.1.50:8096)
@@ -362,6 +411,7 @@ All parts printed in **PETG** (heat resistance required near electronics). Desig
 
 | Part | Model | Est. Cost |
 |---|---|---|
+| JetKVM 10" rack mount | [Printables #1179328](https://www.printables.com/model/1179328) | ~$5 |
 | BC600R UPS 1U bracket | [Printables #1368936](https://www.printables.com/model/1368936) | ~$7 |
 | Cable management plate | [Printables #1247474](https://www.printables.com/model/1247474) | ~$6 |
 | 1U blank panels | Various | ~$4 each |
@@ -410,8 +460,8 @@ Buy in this order to start learning while waiting for parts:
 2. Mount UPS on floor
 3. Mount PDU at U11
 4. Mount patch panel + brush strip at U3
-5. Place switch on 1U shelf at U4
-6. Mount M920q on 3D printed bracket at U5
+5. Place switch + JetKVM on 1U shelf at U4
+6. Mount M920q on 3D printed bracket at U5 — connect JetKVM via HDMI + USB
 7. Mount Pi 5 on SBC shelf at U6
 8. Mount HDD cage at U7-8
 9. Route all cables along rear rail, zip-tie
@@ -468,13 +518,14 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | Official 27W USB-C PSU | $13 |
 | SanDisk 64GB microSD | ~$8-12 |
 
-### Rack & Accessories (~$494-527)
+### Rack & Accessories (~$563-596)
 
 | Component | Price |
 |---|---|
 | GeeekPi RackMate T2 12U | $159 |
 | DeskPi 7.84" Touch Screen | ~$100 |
 | Tripp Lite BC600R UPS | ~$97-130 |
+| JetKVM | $69 |
 | Tupavco TP1713 PDU | $60 |
 | TP-Link TL-SG108 switch | $18 |
 | GeeekPi 1U shelf (switch) | ~$17 |
@@ -511,11 +562,11 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 |---|---|
 | Core compute & storage | ~$535-595 |
 | Raspberry Pi 5 | ~$146-150 |
-| Rack & accessories | ~$494-527 |
+| Rack & accessories | ~$563-596 |
 | Cables & small parts | ~$32 |
 | 3D prints | ~$24 |
 | Software | $49 + $5/mo |
-| **Grand total** | **~$1,230-1,380** |
+| **Grand total** | **~$1,300-1,450** |
 
 <details>
 <summary>Ways to hit ~$1,000</summary>
@@ -540,6 +591,7 @@ All components verified against the T2's **260mm depth** and **210mm safe width*
 | DeskPi Screen | 254 x ~35 x 88.9 | 2U | Yes | Native rack ears |
 | GeeekPi Patch Panel | 254 x ~50 x 23 | 0.5U | Yes | Native rack ears |
 | TP-Link TL-SG108 | 158 x 101 x 25 | 1U (shelf) | Yes | GeeekPi 1U shelf |
+| JetKVM | 43 x 60 x 31 | Shares U4 | Yes | On shelf next to switch |
 | Tupavco TP1713 PDU | 254 x 44 x 44 | 1U | Yes (tight) | Native rack ears |
 | Tripp Lite BC600R | 262 x 180 x 58 | 0U | Floor | Below rails |
 | GeeekPi SBC Shelf | 254 x 200 x 44 | 1U | Yes | Native rack ears |
