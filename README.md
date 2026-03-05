@@ -61,9 +61,11 @@ This homelab is designed for a college apartment with three hard constraints:
 - Media server (Jellyfin) with automated downloads (Sonarr/Radarr)
 - Network-wide ad blocking (AdGuard Home)
 - Photo backup (Immich — self-hosted Google Photos)
-- VPN for remote access (WireGuard)
-- Service monitoring (Uptime Kuma)
+- VPN for remote access (Tailscale + WireGuard)
+- Service dashboard (Homepage) and monitoring (Uptime Kuma)
+- Drive health monitoring (Scrutiny)
 - Remote KVM access to BIOS/boot (JetKVM)
+- Reverse proxy with SSL (Nginx Proxy Manager)
 
 ---
 
@@ -241,7 +243,7 @@ The layout follows community best practices from [geerlingguy/mini-rack](https:/
  REAR VIEW — Cable Paths
  ________________________
 |                        |
-|  Screen  <── HDMI ──┐  |  U1-2
+|  Screen  <── DP→HDMI─┐  |  U1-2
 |          <── USB-C ──┤  |
 |________________________|
 |  Patch Panel         |  |  U3     <-- wall ethernet enters here
@@ -267,10 +269,10 @@ The layout follows community best practices from [geerlingguy/mini-rack](https:/
 |---|---|---|---|
 | SATA data (x2) | M920q rear (U5) | HDD cage (U7-8) | 12-18" |
 | Ethernet patches | Switch (U4) | Patch panel (U3) | 6-12" |
-| HDMI (screen) | M920q (U5) | Screen (U1-2) | ~3 ft |
-| HDMI (JetKVM) | M920q (U5) | JetKVM (U4) | ~1 ft |
+| DP-to-HDMI (screen) | M920q DP out (U5) | Screen HDMI in (U1-2) | ~3 ft |
+| HDMI (JetKVM) | M920q HDMI out (U5) | JetKVM (U4) | ~1 ft |
 | USB-A (JetKVM) | M920q (U5) | JetKVM (U4) | ~1 ft |
-| USB-C (screen) | M920q (U5) | Screen (U1-2) | ~3 ft |
+| USB-C (screen touch) | M920q (U5) | Screen (U1-2) | ~3 ft |
 | 12V DC | Power brick (floor) | HDD cage (U7-8) | ~4 ft |
 | Power cords | PDU (U11) | All devices | Routed up rear rail |
 
@@ -315,7 +317,8 @@ WiFi Clients (via ISP Router):
   All ──► DNS queries routed to Pi AdGuard (192.168.1.51)
 
 Remote Access:
-  Phone/Laptop ──► WireGuard VPN (UDP 51820) ──► Pi 5 ──► Full LAN access
+  Phone/Laptop ──► Tailscale (works behind CGNAT) ──► M920q + Pi 5
+  Phone/Laptop ──► WireGuard VPN (UDP 51820) ──► Pi 5 ──► Full LAN (backup)
 ```
 
 ### Key Router Settings
@@ -350,9 +353,14 @@ Unraid boots from a USB flash drive and manages the storage array with parity pr
      │ Drive 1: data  │       ├── Sonarr       (TV automation)
      │ Drive 2: parity│       ├── Radarr       (movie automation)
      │ Cache: NVMe    │       ├── Prowlarr     (indexer manager)
-     └────────────────┘       ├── qBittorrent  (VPN-tunneled downloads)
+     └────────────────┘       ├── Flaresolverr (CAPTCHA solving)
+                              ├── qBittorrent  (VPN-tunneled downloads)
                               ├── Bazarr       (subtitles)
-                              └── Immich       (photo backup)
+                              ├── Immich       (photo backup)
+                              ├── Homepage     (service dashboard)
+                              ├── Scrutiny     (drive health)
+                              ├── Nginx Proxy  (reverse proxy + SSL)
+                              └── Watchtower   (auto-updates)
 ```
 
 ### Media Automation Pipeline
@@ -391,6 +399,19 @@ ISP sees: encrypted WireGuard traffic only
 | **AdGuard Home** | 53 (DNS), 3000 (web) | Network-wide ad/tracker blocking |
 | **WireGuard** | 51820 (UDP) | VPN tunnel for remote access |
 | **Uptime Kuma** | 3001 | Monitors all services, sends alerts |
+
+### Infrastructure Services (M920q)
+
+| Service | Port | Purpose |
+|---|---|---|
+| **Homepage** | 3000 | Dashboard showing all services + system stats |
+| **Scrutiny** | 8080 | SMART drive health monitoring and alerts |
+| **Nginx Proxy Manager** | 81 (admin), 80/443 (proxy) | Reverse proxy — access services by name instead of IP:port |
+| **Watchtower** | — | Auto-updates Docker containers nightly (no web UI) |
+| **Flaresolverr** | 8191 | Solves Cloudflare CAPTCHAs for Prowlarr indexers |
+| **Tailscale** | — | Mesh VPN — works behind CGNAT, no port forwarding needed |
+
+**Why Tailscale alongside WireGuard?** Apartment internet (The Standard at Auburn) likely uses CGNAT — meaning you don't get a real public IP, and port forwarding for WireGuard is impossible. Tailscale works through CGNAT with zero router configuration. Install it on the M920q, Pi, phone, and laptop — instant encrypted access from anywhere. Keep WireGuard as a fallback for when you have a direct connection.
 
 ### Ad Blocking Notes
 
@@ -461,7 +482,7 @@ Buy in this order to start learning while waiting for parts:
 1. **BIOS setup** — Disable Secure Boot, set USB as first boot device
 2. **ASM1166 firmware** — Flash ECS06 firmware from SilverStone's site (do on Windows before deploying)
 3. **Install ASM1166** — Insert into PCIe riser slot, verify SATA ports are accessible from rear
-4. **Flash Unraid** — Write to SanDisk 16GB USB drive using Unraid USB Creator
+4. **Flash Unraid** — Write to Samsung FIT Plus 32GB USB-C SSD using Unraid USB Creator
 5. **Boot and license** — First boot, register Starter license ($49, up to 6 devices)
 
 ### Phase 3: Rack Assembly
@@ -496,12 +517,18 @@ Buy in this order to start learning while waiting for parts:
 See [docs/software-setup.md](docs/software-setup.md) for detailed container configuration.
 
 **Quick start order:**
-1. Jellyfin (verify transcoding works)
-2. AdGuard Home on Pi
-3. Prowlarr + Sonarr + Radarr + qBittorrent (media pipeline)
-4. WireGuard on Pi (remote access)
-5. Uptime Kuma on Pi (monitoring)
-6. Immich (photo backup)
+1. Tailscale on M920q + Pi (remote access — do this first so you can manage remotely)
+2. Jellyfin (verify transcoding works)
+3. AdGuard Home on Pi
+4. Prowlarr + Flaresolverr + Sonarr + Radarr + qBittorrent (media pipeline)
+5. Bazarr (subtitles)
+6. Nginx Proxy Manager (clean URLs for all services)
+7. Homepage (dashboard)
+8. Scrutiny (drive health monitoring)
+9. Watchtower (auto-updates)
+10. WireGuard on Pi (backup VPN)
+11. Uptime Kuma on Pi (monitoring)
+12. Immich (photo backup)
 
 ---
 
@@ -518,7 +545,7 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | SHNITPWR 12V 10A brick | ~$17 | Powers HDD cage |
 | RGEEK DC-ATX board | ~$36 | Converts 12V to SATA power |
 | SATA cables 18" (3-pack) | ~$8 | Cable Matters |
-| SanDisk 16GB USB (Unraid boot) | ~$9 | |
+| ~~SanDisk 16GB USB~~ | — | Replaced by Samsung FIT Plus in cables section |
 
 ### Raspberry Pi 5 (~$146-150)
 
@@ -550,14 +577,19 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | Noctua NF-A4x20 5V PWM fan | ~$15 |
 | TP-Link Kasa KP115 smart plug | ~$15 |
 
-### Cables & Small Parts (~$32)
+### Cables & Small Parts (~$72)
 
-| Component | Price |
-|---|---|
-| Cat6 patch cables 1ft (5-pack) | ~$9 |
-| HDMI cable 1ft (2-pack) | ~$8 |
-| USB-C cable 1ft (3-pack) | ~$8 |
-| HDD screws + anti-vibe grommets | ~$7 |
+| Component | Price | Notes |
+|---|---|---|
+| DP-to-HDMI cable 3ft | ~$8 | M920q DisplayPort to screen HDMI input |
+| Samsung FIT Plus 32GB USB-C | ~$10 | Replaces flash drive for Unraid boot (far more reliable) |
+| USB 3.0 hub (4-port, powered) | ~$12 | Extra ports for boot drive, JetKVM USB, screen touch |
+| Cat6 patch cables 1ft (5-pack) | ~$9 | |
+| HDMI cable 1ft | ~$5 | M920q HDMI to JetKVM |
+| USB-C cable 1ft (3-pack) | ~$8 | |
+| Velcro cable ties (50-pack) | ~$7 | Reusable, replace zip ties |
+| HDD screws + anti-vibe grommets | ~$7 | |
+| USB-A to USB-A cable 1ft | ~$6 | JetKVM to M920q (keyboard/mouse emulation) |
 
 ### 3D Prints (~$24)
 
@@ -572,6 +604,8 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 |---|---|
 | Unraid Starter license | $49 (one-time) |
 | Mullvad VPN | $5/month |
+| Tailscale | Free (personal use) |
+| All other software | Free (open-source) |
 
 ### Budget Summary
 
@@ -581,10 +615,10 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | Raspberry Pi 5 | ~$146-150 |
 | Rack & accessories | ~$563-596 |
 | Cooling & monitoring | ~$30 |
-| Cables & small parts | ~$32 |
+| Cables & small parts | ~$72 |
 | 3D prints | ~$24 |
 | Software | $49 + $5/mo |
-| **Grand total** | **~$1,330-1,480** |
+| **Grand total** | **~$1,370-1,520** |
 
 <details>
 <summary>Ways to hit ~$1,000</summary>

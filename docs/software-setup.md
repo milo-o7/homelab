@@ -8,11 +8,17 @@ Step-by-step configuration for all Docker containers on the M920q (Unraid) and P
 
 - [Unraid Initial Setup](#unraid-initial-setup)
 - [Storage Configuration](#storage-configuration)
+- [Tailscale](#tailscale)
 - [Jellyfin](#jellyfin)
 - [Arr Stack (Sonarr, Radarr, Prowlarr)](#arr-stack)
+- [Flaresolverr](#flaresolverr)
 - [qBittorrent + VPN](#qbittorrent--vpn)
 - [Bazarr](#bazarr)
 - [Immich](#immich)
+- [Nginx Proxy Manager](#nginx-proxy-manager)
+- [Homepage](#homepage)
+- [Scrutiny](#scrutiny)
+- [Watchtower](#watchtower)
 - [Pi 5: AdGuard Home](#pi-5-adguard-home)
 - [Pi 5: WireGuard](#pi-5-wireguard)
 - [Pi 5: Uptime Kuma](#pi-5-uptime-kuma)
@@ -75,6 +81,40 @@ Set up the unified folder structure that enables hardlinks:
    ```
 
 > This unified `/data/` structure is critical. All apps must see the same root path for hardlinks to work. Without this, Sonarr/Radarr will *copy* files instead of instant-linking them, doubling your disk usage.
+
+---
+
+## Tailscale
+
+**Purpose:** Mesh VPN that works behind CGNAT — remote access without port forwarding
+
+Apartment internet often uses carrier-grade NAT, making traditional WireGuard port forwarding impossible. Tailscale creates an encrypted mesh network between all your devices with zero router configuration.
+
+### Install on Unraid (M920q)
+
+1. **Apps** > search "Tailscale" > install the official `tailscale/tailscale` container
+2. Or install via **Plugins** > search "Tailscale" (Unraid has a native plugin)
+3. Authenticate at the URL shown in the container logs
+4. In Tailscale admin console: enable **Subnet Routes** for `192.168.1.0/24` to access your whole LAN remotely
+
+### Install on Pi 5
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up --advertise-routes=192.168.1.0/24
+```
+
+### Install on Phone/Laptop
+
+1. Download Tailscale app (iOS, Android, macOS, Windows, Linux)
+2. Sign in with same account
+3. All devices can now reach each other by Tailscale IP or hostname
+
+### Key Settings
+
+- **MagicDNS:** Enabled — access M920q as `m920q` instead of an IP
+- **Exit node:** Enable on M920q to route all traffic through your homelab when remote (like a traditional VPN)
+- **ACLs:** Default allows all devices to see each other — fine for personal use
 
 ---
 
@@ -141,6 +181,28 @@ Set up the unified folder structure that enables hardlinks:
 
 ---
 
+## Flaresolverr
+
+**Purpose:** Solves Cloudflare CAPTCHAs so Prowlarr can access protected indexer sites
+
+Many torrent indexers use Cloudflare anti-bot challenges. Prowlarr can't solve CAPTCHAs on its own — without Flaresolverr, half your indexers will randomly stop working.
+
+### Install
+
+1. **Apps** > search "Flaresolverr" > install `ghcr.io/flaresolverr/flaresolverr`
+2. Port: `8191`
+3. No path mappings needed — it runs a headless browser internally
+
+### Connect to Prowlarr
+
+1. In Prowlarr: **Settings > Indexers > Add** (under Indexer Proxies)
+2. Select **FlareSolverr**
+3. Tag: `flaresolverr`
+4. Host: `http://flaresolverr:8191`
+5. Apply the `flaresolverr` tag to any indexer that uses Cloudflare
+
+---
+
 ## qBittorrent + VPN
 
 Uses the `binhex-qbittorrentvpn` container — bundles qBittorrent + WireGuard + kill switch.
@@ -194,6 +256,158 @@ The container has a built-in kill switch. If the VPN drops, all torrent traffic 
 5. Configure auto-backup of camera roll
 
 > Immich is more complex than other containers — it requires PostgreSQL and Redis. The Unraid community template handles all dependencies automatically.
+
+---
+
+## Nginx Proxy Manager
+
+**Purpose:** Reverse proxy — access services by name (e.g., `jellyfin.home`) instead of `192.168.1.50:8096`
+
+### Install
+
+1. **Apps** > search "Nginx Proxy Manager" > install `jc21/nginx-proxy-manager`
+2. Ports: `80` (HTTP), `443` (HTTPS), `81` (admin panel)
+3. Config path: `/mnt/user/appdata/nginx-proxy-manager`
+4. Default login: `admin@example.com` / `changeme` (change immediately)
+
+### Configure
+
+1. Access admin at `http://192.168.1.50:81`
+2. For each service, add a **Proxy Host:**
+   - Domain: `jellyfin.home` (or `jellyfin.yourdomain.com` if you own a domain)
+   - Scheme: `http`
+   - Forward hostname: `192.168.1.50`
+   - Forward port: `8096`
+   - Enable "Block Common Exploits"
+3. For SSL with a real domain: use the built-in Let's Encrypt integration (free certs, auto-renewal)
+
+### Local DNS Integration
+
+For `.home` domains to work locally, add DNS rewrites in AdGuard Home:
+- `*.home` -> `192.168.1.50`
+
+Now `jellyfin.home`, `sonarr.home`, etc. all resolve to the M920q, and Nginx Proxy Manager routes them to the correct port.
+
+---
+
+## Homepage
+
+**Purpose:** Clean dashboard showing all services with live status, system stats, and widgets
+
+### Install
+
+1. **Apps** > search "Homepage" > install `ghcr.io/gethomepage/homepage`
+2. Port: `3000` (change to `3100` if conflicting with AdGuard)
+3. Config path: `/mnt/user/appdata/homepage`
+
+### Configure
+
+Edit `/mnt/user/appdata/homepage/services.yaml`:
+
+```yaml
+- Media:
+    - Jellyfin:
+        href: http://192.168.1.50:8096
+        icon: jellyfin.png
+        widget:
+          type: jellyfin
+          url: http://192.168.1.50:8096
+          key: YOUR_API_KEY
+
+    - Sonarr:
+        href: http://192.168.1.50:8989
+        icon: sonarr.png
+        widget:
+          type: sonarr
+          url: http://192.168.1.50:8989
+          key: YOUR_API_KEY
+
+    - Radarr:
+        href: http://192.168.1.50:7878
+        icon: radarr.png
+        widget:
+          type: radarr
+          url: http://192.168.1.50:7878
+          key: YOUR_API_KEY
+
+- Infrastructure:
+    - AdGuard:
+        href: http://192.168.1.51:3000
+        icon: adguard-home.png
+        widget:
+          type: adguard
+          url: http://192.168.1.51:3000
+          username: YOUR_USER
+          password: YOUR_PASS
+
+    - Scrutiny:
+        href: http://192.168.1.50:8082
+        icon: scrutiny.png
+        widget:
+          type: scrutiny
+          url: http://192.168.1.50:8082
+```
+
+Homepage supports widgets for nearly every homelab service — it pulls live data (active streams, queue counts, disk health, DNS queries blocked) directly into the dashboard.
+
+---
+
+## Scrutiny
+
+**Purpose:** Monitors SMART data on your WD Red Plus drives — alerts before drive failure
+
+With only 2 drives (data + parity), a silent drive failure can be catastrophic. Scrutiny checks temperatures, reallocated sectors, power-on hours, and gives each drive a health grade.
+
+### Install
+
+1. **Apps** > search "Scrutiny" > install `ghcr.io/analogj/scrutiny`
+2. Port: `8082`
+3. Config path: `/mnt/user/appdata/scrutiny`
+4. **Critical:** Pass through `/dev/disk` so Scrutiny can read SMART data:
+   - Device: `/dev/disk` -> `/dev/disk`
+   - Also pass: `/run/udev` -> `/run/udev:ro`
+5. The container needs `--cap-add=SYS_RAWIO` for direct disk access
+
+### Configure
+
+1. Access at `http://192.168.1.50:8082`
+2. Drives should auto-detect — verify both WD Red Plus drives appear
+3. SMART scan runs automatically on a schedule (default: every 24 hours)
+4. Set up notifications: **Settings > Notifications** — supports Discord, email, Pushover, etc.
+
+### What to Watch
+
+| Metric | Warning Sign |
+|---|---|
+| Reallocated Sector Count | Any non-zero value — drive is remapping bad sectors |
+| Current Pending Sector | Sectors waiting to be remapped — imminent failure indicator |
+| Temperature | Sustained >45C for WD Red Plus — check Noctua fan |
+| Power-On Hours | >30,000 hours — consider proactive replacement |
+
+---
+
+## Watchtower
+
+**Purpose:** Automatically updates Docker containers when new images are released
+
+### Install
+
+1. **Apps** > search "Watchtower" > install `containrrr/watchtower`
+2. No port needed — Watchtower has no web UI
+3. Pass Docker socket: `/var/run/docker.sock` -> `/var/run/docker.sock`
+
+### Configure
+
+Key environment variables:
+
+| Variable | Value | Purpose |
+|---|---|---|
+| `WATCHTOWER_SCHEDULE` | `0 0 4 * * *` | Check for updates at 4 AM daily |
+| `WATCHTOWER_CLEANUP` | `true` | Remove old images after updating |
+| `WATCHTOWER_NOTIFICATIONS` | `shoutrrr` | Enable notifications |
+| `WATCHTOWER_NOTIFICATION_URL` | `discord://webhook_id/token` | Discord webhook for update alerts |
+
+> Watchtower will update ALL containers by default. To exclude a container from auto-updates (e.g., Unraid itself), add the label `com.centurylinklabs.watchtower.enable=false` to that container.
 
 ---
 
@@ -307,10 +521,16 @@ docker run -d --name uptime-kuma \
 | Sonarr | M920q | 8989 | `http://192.168.1.50:8989` |
 | Radarr | M920q | 7878 | `http://192.168.1.50:7878` |
 | Prowlarr | M920q | 9696 | `http://192.168.1.50:9696` |
+| Flaresolverr | M920q | 8191 | `http://192.168.1.50:8191` |
 | qBittorrent | M920q | 8080 | `http://192.168.1.50:8080` |
 | Bazarr | M920q | 6767 | `http://192.168.1.50:6767` |
 | Immich | M920q | 2283 | `http://192.168.1.50:2283` |
+| Nginx Proxy Manager | M920q | 81 | `http://192.168.1.50:81` |
+| Homepage | M920q | 3100 | `http://192.168.1.50:3100` |
+| Scrutiny | M920q | 8082 | `http://192.168.1.50:8082` |
+| Watchtower | M920q | — | No web UI (runs in background) |
+| Tailscale | M920q + Pi | — | Managed via `tailscale.com/admin` |
 | AdGuard Home | Pi 5 | 3000 | `http://192.168.1.51:3000` |
-| WireGuard | Pi 5 | 51820 | UDP only |
+| WireGuard | Pi 5 | 51820 | UDP only (backup VPN) |
 | Uptime Kuma | Pi 5 | 3001 | `http://192.168.1.51:3001` |
 | Portainer | Pi 5 | 9443 | `https://192.168.1.51:9443` |
