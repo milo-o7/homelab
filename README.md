@@ -151,6 +151,16 @@ The JetKVM gives you full remote BIOS-level access to the M920q — keyboard, vi
 | **Tupavco TP1713 PDU** | 1U, 4-outlet, native 10" ears | $60 |
 | **Tripp Lite BC600R UPS** | 600VA/300W, sits on rack floor | ~$97-130 |
 
+### Cooling & Monitoring
+
+| Component | Specs | Price |
+|---|---|---|
+| **Noctua NF-A4x20 5V** | 40mm fan, 5V USB-powered, near-silent | ~$15 |
+| **TP-Link Kasa Smart Plug** | Energy monitoring, WiFi, no hub needed | ~$15 |
+
+- **Noctua fan** — Mounts at the rear of the rack near the HDD cage. Insurance for summer heat. The open-frame T2 has excellent passive airflow, but a 40mm Noctua at 5V is inaudible and keeps drives in the safe 30-40C range. Powered via USB from the M920q or a USB charger on the PDU.
+- **Smart plug** — Goes between the wall outlet and the UPS. Tracks real-time power draw (watts), logs usage over time, and enables remote power cycling of the entire rack. Works with Alexa/Google Home, or integrate with Home Assistant later.
+
 ### The Rack
 
 **GeeekPi RackMate T2** — 12U, 10-inch, 260mm depth, $159
@@ -533,6 +543,13 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | GeeekPi 12-port patch panel | ~$16 |
 | GeeekPi brush strip | ~$11 |
 
+### Cooling & Monitoring (~$30)
+
+| Component | Price |
+|---|---|
+| Noctua NF-A4x20 5V PWM fan | ~$15 |
+| TP-Link Kasa KP115 smart plug | ~$15 |
+
 ### Cables & Small Parts (~$32)
 
 | Component | Price |
@@ -563,10 +580,11 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | Core compute & storage | ~$535-595 |
 | Raspberry Pi 5 | ~$146-150 |
 | Rack & accessories | ~$563-596 |
+| Cooling & monitoring | ~$30 |
 | Cables & small parts | ~$32 |
 | 3D prints | ~$24 |
 | Software | $49 + $5/mo |
-| **Grand total** | **~$1,300-1,450** |
+| **Grand total** | **~$1,330-1,480** |
 
 <details>
 <summary>Ways to hit ~$1,000</summary>
