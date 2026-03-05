@@ -1,0 +1,17 @@
+# Zone.Identifier files (Windows/WSL metadata)
+*:Zone.Identifier
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude context (internal planning, not for public repo)
+homelab-context.md
+CLAUDE.md
