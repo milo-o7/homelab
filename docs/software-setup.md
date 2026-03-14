@@ -1,6 +1,6 @@
 # Software Setup Guide
 
-Step-by-step configuration for all Docker containers on the M920q (Unraid) and Pi 5.
+Step-by-step configuration for all Docker containers on the M920q (Unraid).
 
 ---
 
@@ -19,9 +19,9 @@ Step-by-step configuration for all Docker containers on the M920q (Unraid) and P
 - [Homepage](#homepage)
 - [Scrutiny](#scrutiny)
 - [Watchtower](#watchtower)
-- [Pi 5: AdGuard Home](#pi-5-adguard-home)
-- [Pi 5: WireGuard](#pi-5-wireguard)
-- [Pi 5: Uptime Kuma](#pi-5-uptime-kuma)
+- [AdGuard Home](#adguard-home)
+- [WireGuard](#wireguard)
+- [Uptime Kuma](#uptime-kuma)
 
 ---
 
@@ -96,13 +96,6 @@ Apartment internet often uses carrier-grade NAT, making traditional WireGuard po
 2. Or install via **Plugins** > search "Tailscale" (Unraid has a native plugin)
 3. Authenticate at the URL shown in the container logs
 4. In Tailscale admin console: enable **Subnet Routes** for `192.168.1.0/24` to access your whole LAN remotely
-
-### Install on Pi 5
-
-```bash
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up --advertise-routes=192.168.1.0/24
-```
 
 ### Install on Phone/Laptop
 
@@ -332,11 +325,11 @@ Edit `/mnt/user/appdata/homepage/services.yaml`:
 
 - Infrastructure:
     - AdGuard:
-        href: http://192.168.1.51:3000
+        href: http://192.168.1.50:3000
         icon: adguard-home.png
         widget:
           type: adguard
-          url: http://192.168.1.51:3000
+          url: http://192.168.1.50:3000
           username: YOUR_USER
           password: YOUR_PASS
 
@@ -411,102 +404,85 @@ Key environment variables:
 
 ---
 
-## Pi 5: AdGuard Home
+## AdGuard Home
 
-### Install Docker + Portainer on Pi OS
+**Purpose:** Network-wide DNS ad blocker — blocks ads and trackers for every device on the network
 
-```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-# Log out and back in
+### Install
 
-# Install Portainer
-docker volume create portainer_data
-docker run -d -p 8000:8000 -p 9443:9443 --name portainer \
-  --restart=always \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v portainer_data:/data \
-  portainer/portainer-ce:latest
-```
-
-### Install AdGuard Home
-
-```bash
-docker run -d --name adguardhome \
-  --restart=always \
-  -v /opt/adguardhome/work:/opt/adguardhome/work \
-  -v /opt/adguardhome/conf:/opt/adguardhome/conf \
-  -p 53:53/tcp -p 53:53/udp \
-  -p 3000:3000/tcp \
-  adguard/adguardhome
-```
+1. Go to **Apps** tab, search "AdGuard Home"
+2. Install the `adguard/adguardhome` container
+3. Key settings:
+   - **DNS port:** `53` (TCP and UDP)
+   - **Web UI port:** `3000`
+   - **Config path:** `/mnt/user/appdata/adguardhome/conf`
+   - **Work path:** `/mnt/user/appdata/adguardhome/work`
 
 ### Configure
 
-1. Access setup wizard at `http://192.168.1.51:3000`
+1. Access setup wizard at `http://192.168.1.50:3000`
 2. Set admin password
 3. Add blocklists:
    - **OISD Big:** `https://big.oisd.nl`
    - **HaGeZi Multi Pro:** `https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.txt`
    - **Steven Black:** `https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts`
-4. **Router config:** Set DNS server to `192.168.1.51` — all devices now use AdGuard
+4. **Router config:** Set DNS server to `192.168.1.50` — all devices now use AdGuard
 
 ---
 
-## Pi 5: WireGuard
+## WireGuard
+
+**Purpose:** VPN server for remote access to the local network
 
 ### Install
 
-```bash
-docker run -d --name wireguard \
-  --cap-add=NET_ADMIN \
-  --cap-add=SYS_MODULE \
-  -e PUID=1000 -e PGID=1000 \
-  -e TZ=America/Chicago \
-  -e SERVERURL=auto \
-  -e PEERS=phone,laptop \
-  -e PEERDNS=192.168.1.51 \
-  -p 51820:51820/udp \
-  -v /opt/wireguard:/config \
-  --sysctl="net.ipv4.conf.all.src_valid_mark=1" \
-  --restart=always \
-  linuxserver/wireguard
-```
+1. Go to **Apps** tab, search "WireGuard" > install the `linuxserver/wireguard` container
+2. Key template settings:
+   - **Port:** `51820` (UDP)
+   - **Config path:** `/mnt/user/appdata/wireguard`
+   - **Key environment variables:**
+
+| Variable | Value | Purpose |
+|---|---|---|
+| `SERVERURL` | `auto` | Auto-detects your public IP |
+| `PEERS` | `phone,laptop` | Creates a config per client |
+| `PEERDNS` | `192.168.1.50` | Routes DNS through AdGuard on the same host |
+| `TZ` | `America/Chicago` | Timezone |
+
+3. Under **Extra Parameters**, add: `--cap-add=NET_ADMIN --cap-add=SYS_MODULE --sysctl="net.ipv4.conf.all.src_valid_mark=1"`
 
 ### Configure
 
-1. Router: Forward UDP port `51820` to `192.168.1.51`
-2. Find client configs:
+1. Router: Forward UDP port `51820` to `192.168.1.50`
+2. Find client configs via Unraid terminal:
    ```bash
    docker exec wireguard cat /config/peer_phone/peer_phone.conf
    ```
 3. Scan QR code on phone or copy config to laptop WireGuard client
-4. `PEERDNS=192.168.1.51` routes DNS through AdGuard even when remote
+4. `PEERDNS=192.168.1.50` routes DNS through AdGuard even when remote
 
 ---
 
-## Pi 5: Uptime Kuma
+## Uptime Kuma
+
+**Purpose:** Self-hosted uptime monitoring for all services
 
 ### Install
 
-```bash
-docker run -d --name uptime-kuma \
-  --restart=always \
-  -p 3001:3001 \
-  -v /opt/uptime-kuma:/app/data \
-  louislam/uptime-kuma
-```
+1. Go to **Apps** tab, search "Uptime Kuma" > install the `louislam/uptime-kuma` container
+2. Key settings:
+   - **Port:** `3001`
+   - **Config path:** `/mnt/user/appdata/uptime-kuma`
 
 ### Configure
 
-1. Access at `http://192.168.1.51:3001`
+1. Access at `http://192.168.1.50:3001`
 2. Add monitors for each service:
    - Jellyfin: `http://192.168.1.50:8096`
    - Unraid: `http://192.168.1.50`
    - Sonarr: `http://192.168.1.50:8989`
    - Radarr: `http://192.168.1.50:7878`
-   - AdGuard: `http://192.168.1.51:3000`
+   - AdGuard: `http://192.168.1.50:3000`
    - qBittorrent: `http://192.168.1.50:8080`
 3. Optional: Set up notifications (Discord webhook, email, Telegram)
 
@@ -529,8 +505,7 @@ docker run -d --name uptime-kuma \
 | Homepage | M920q | 3100 | `http://192.168.1.50:3100` |
 | Scrutiny | M920q | 8082 | `http://192.168.1.50:8082` |
 | Watchtower | M920q | — | No web UI (runs in background) |
-| Tailscale | M920q + Pi | — | Managed via `tailscale.com/admin` |
-| AdGuard Home | Pi 5 | 3000 | `http://192.168.1.51:3000` |
-| WireGuard | Pi 5 | 51820 | UDP only (backup VPN) |
-| Uptime Kuma | Pi 5 | 3001 | `http://192.168.1.51:3001` |
-| Portainer | Pi 5 | 9443 | `https://192.168.1.51:9443` |
+| Tailscale | M920q | — | Managed via `tailscale.com/admin` |
+| AdGuard Home | M920q | 3000 | `http://192.168.1.50:3000` |
+| WireGuard | M920q | 51820 | UDP only (backup VPN) |
+| Uptime Kuma | M920q | 3001 | `http://192.168.1.50:3001` |

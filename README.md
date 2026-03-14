@@ -1,8 +1,8 @@
 # 10-Inch Mini Rack Homelab
 
-> A budget-friendly, bedroom-quiet homelab built around a 10-inch GeeekPi rack, Lenovo M920q "ThinkNAS," and Raspberry Pi 5.
+> A budget-friendly, bedroom-quiet homelab built around a 10-inch GeeekPi rack and Lenovo M920q "ThinkNAS."
 
-![Budget](https://img.shields.io/badge/budget-%24950--1%2C070-blue)
+![Budget](https://img.shields.io/badge/budget-%24800--910-blue)
 ![Rack](https://img.shields.io/badge/rack-GeeekPi%2012U%20T2-orange)
 ![OS](https://img.shields.io/badge/OS-Unraid-green)
 ![Storage](https://img.shields.io/badge/storage-2x%204TB%20WD%20Red%20Plus-red)
@@ -17,11 +17,9 @@
 ├──────────────────────────────────┤
 │ U5     Lenovo M920q (1U)         │
 ├──────────────────────────────────┤
-│ U6     Raspberry Pi 5 (1U)       │
+│ U6-7   3D Printed HDD Cage (2U) │
 ├──────────────────────────────────┤
-│ U7-8   3D Printed HDD Cage (2U) │
-├──────────────────────────────────┤
-│ U9-10  Expansion (2U free)       │
+│ U8-10  Expansion (3U free)       │
 ├──────────────────────────────────┤
 │ U11    Tupavco PDU (1U)          │
 ├──────────────────────────────────┤
@@ -55,7 +53,7 @@ This homelab is designed for a college apartment with three hard constraints:
 |---|---|
 | **Small footprint** | 10-inch mini rack sits on a desk |
 | **Near-silent** | Passive/quiet components, no server fans |
-| **Low power draw** | ~65W total idle (M920q + Pi + switch) |
+| **Low power draw** | ~45W total idle (M920q + switch) |
 
 **What it does:**
 - Media server (Jellyfin) with automated downloads (Sonarr/Radarr)
@@ -76,7 +74,6 @@ This homelab is designed for a college apartment with three hard constraints:
 | Component | Specs | Role | Price |
 |---|---|---|---|
 | **Lenovo M920q Tiny** | i5-8500T, 6C/6T, 16GB DDR4, 256GB NVMe | Main server (Unraid) | ~$130-190 |
-| **Raspberry Pi 5 8GB** | Quad A76, 8GB LPDDR4X | Always-on services | $125 |
 
 #### Why M920q over N100 mini PCs?
 
@@ -104,7 +101,7 @@ The PCIe riser slot is the killer feature. It accepts an ASM1166 M.2-to-SATA con
 ### Storage
 
 ```
-M920q                          3D Printed HDD Cage (U7-8)
+M920q                          3D Printed HDD Cage (U6-7)
 ┌─────────────┐                ┌─────────────────────┐
 │  M.2 NVMe   │  cache/docker  │  WD Red Plus 4TB    │
 │  256GB SSD   │                │  ┌─────────────────┐│
@@ -205,13 +202,13 @@ The layout follows community best practices from [geerlingguy/mini-rack](https:/
 |      └─────────────────────────────────────┘  |
 |_______________________________________________|
 |                                               |
-|  U6  | Raspberry Pi 5 |      SBC Shelf      |  |  <-- AdGuard, WireGuard
+|  U6  ┌─────────────────────────────────────┐  |
+|      |  3D Printed HDD Cage               |  |  <-- SATA data from U5
+|  U7  |  WD Red Plus 4TB  x2               |  |  <-- 12V from power brick
+|      └─────────────────────────────────────┘  |
 |_______________________________________________|
 |                                               |
-|  U7  ┌─────────────────────────────────────┐  |
-|      |  3D Printed HDD Cage               |  |  <-- SATA data from U5
-|  U8  |  WD Red Plus 4TB  x2               |  |  <-- 12V from power brick
-|      └─────────────────────────────────────┘  |
+|  U8  |          ( expansion )              |  |
 |_______________________________________________|
 |                                               |
 |  U9  |          ( expansion )              |  |
@@ -233,7 +230,7 @@ The layout follows community best practices from [geerlingguy/mini-rack](https:/
 |      ╚═════════════════════════════════════╝  |
 |_______________________________________________|
 
- U Budget: 10U used + 2U expansion
+ U Budget: 9U used + 3U expansion
  UPS: 0U (floor, below lowest rail)
 ```
 
@@ -254,7 +251,7 @@ The layout follows community best practices from [geerlingguy/mini-rack](https:/
 |          |           |  |
 |          | SATA x2   |  |         cables zip-tied to rear rail
 |          |           |  |
-|  HDD Cage <──────────┘  |  U7-8   <-- 12V power up from floor
+|  HDD Cage <──────────┘  |  U6-7   <-- 12V power up from floor
 |________________________|
 |                        |
 |  PDU                 |  |  U11    <-- power cords route up rail
@@ -267,13 +264,13 @@ The layout follows community best practices from [geerlingguy/mini-rack](https:/
 
 | Cable | From | To | Length Needed |
 |---|---|---|---|
-| SATA data (x2) | M920q rear (U5) | HDD cage (U7-8) | 12-18" |
+| SATA data (x2) | M920q rear (U5) | HDD cage (U6-7) | 12-18" |
 | Ethernet patches | Switch (U4) | Patch panel (U3) | 6-12" |
 | DP-to-HDMI (screen) | M920q DP out (U5) | Screen HDMI in (U1-2) | ~3 ft |
 | HDMI (JetKVM) | M920q HDMI out (U5) | JetKVM (U4) | ~1 ft |
 | USB-A (JetKVM) | M920q (U5) | JetKVM (U4) | ~1 ft |
 | USB-C (screen touch) | M920q (U5) | Screen (U1-2) | ~3 ft |
-| 12V DC | Power brick (floor) | HDD cage (U7-8) | ~4 ft |
+| 12V DC | Power brick (floor) | HDD cage (U6-7) | ~4 ft |
 | Power cords | PDU (U11) | All devices | Routed up rear rail |
 
 ---
@@ -300,25 +297,29 @@ The layout follows community best practices from [geerlingguy/mini-rack](https:/
          ┌─────────────────┴──────────────────┐
          │      TP-Link TL-SG108 Switch        │
          │      8-port gigabit (U4)            │
-         └──┬──────────┬──────────┬────────────┘
-            │          │          │
-     ┌──────┴───┐ ┌────┴────┐ ┌──┴──────┐
-     │  M920q   │ │  Pi 5   │ │ JetKVM  │
-     │ .1.50    │ │ .1.51   │ │ .1.52   │
-     │ Unraid   │ │ AdGuard │ │ KVM/IP  │
-     │ Jellyfin │ │ WireGrd │ │ for     │
-     │ Sonarr   │ │ Uptime  │ │ M920q   │
-     │ Radarr   │ │ Kuma    │ │         │
-     └──────────┘ └─────────┘ └─────────┘
+         └──┬─────────────────────┬────────────┘
+            │                     │
+     ┌──────┴───┐          ┌──┴──────┐
+     │  M920q   │          │ JetKVM  │
+     │ .1.50    │          │ .1.52   │
+     │ Unraid   │          │ KVM/IP  │
+     │ Jellyfin │          │ for     │
+     │ Sonarr   │          │ M920q   │
+     │ Radarr   │          │         │
+     │ AdGuard  │          └─────────┘
+     │ WireGrd  │
+     │ Uptime   │
+     │ Kuma     │
+     └──────────┘
 
 WiFi Clients (via ISP Router):
   Phone ──► Jellyfin streaming (192.168.1.50:8096)
   Laptop ──► Unraid WebUI (192.168.1.50)
-  All ──► DNS queries routed to Pi AdGuard (192.168.1.51)
+  All ──► DNS queries routed to M920q AdGuard (192.168.1.50)
 
 Remote Access:
-  Phone/Laptop ──► Tailscale (works behind CGNAT) ──► M920q + Pi 5
-  Phone/Laptop ──► WireGuard VPN (UDP 51820) ──► Pi 5 ──► Full LAN (backup)
+  Phone/Laptop ──► Tailscale (works behind CGNAT) ──► M920q
+  Phone/Laptop ──► WireGuard VPN (UDP 51820) ──► M920q ──► Full LAN (backup)
 ```
 
 ### Key Router Settings
@@ -326,9 +327,8 @@ Remote Access:
 | Setting | Value | Purpose |
 |---|---|---|
 | Static DHCP lease | M920q = `192.168.1.50` | Server always reachable at same IP |
-| Static DHCP lease | Pi 5 = `192.168.1.51` | DNS server always reachable |
-| DNS server | `192.168.1.51` | Routes all DNS through AdGuard |
-| Port forward | UDP `51820` -> `192.168.1.51` | WireGuard remote access |
+| DNS server | `192.168.1.50` | Routes all DNS through AdGuard |
+| Port forward | UDP `51820` -> `192.168.1.50` | WireGuard remote access |
 
 ---
 
@@ -359,6 +359,9 @@ Unraid boots from a USB flash drive and manages the storage array with parity pr
                               ├── Immich       (photo backup)
                               ├── Homepage     (service dashboard)
                               ├── Scrutiny     (drive health)
+                              ├── AdGuard Home (DNS ad blocking)
+                              ├── WireGuard    (VPN remote access)
+                              ├── Uptime Kuma  (service monitoring)
                               ├── Nginx Proxy  (reverse proxy + SSL)
                               └── Watchtower   (auto-updates)
 ```
@@ -392,18 +395,13 @@ ISP sees: encrypted WireGuard traffic only
 
 > All apps must share the same `/data/` root. This enables hardlinks — Sonarr/Radarr "move" completed downloads instantly with zero disk usage overhead.
 
-### Pi 5 — Always-On Services
+### Infrastructure Services (M920q)
 
 | Service | Port | Purpose |
 |---|---|---|
 | **AdGuard Home** | 53 (DNS), 3000 (web) | Network-wide ad/tracker blocking |
 | **WireGuard** | 51820 (UDP) | VPN tunnel for remote access |
 | **Uptime Kuma** | 3001 | Monitors all services, sends alerts |
-
-### Infrastructure Services (M920q)
-
-| Service | Port | Purpose |
-|---|---|---|
 | **Homepage** | 3000 | Dashboard showing all services + system stats |
 | **Scrutiny** | 8080 | SMART drive health monitoring and alerts |
 | **Nginx Proxy Manager** | 81 (admin), 80/443 (proxy) | Reverse proxy — access services by name instead of IP:port |
@@ -411,7 +409,7 @@ ISP sees: encrypted WireGuard traffic only
 | **Flaresolverr** | 8191 | Solves Cloudflare CAPTCHAs for Prowlarr indexers |
 | **Tailscale** | — | Mesh VPN — works behind CGNAT, no port forwarding needed |
 
-**Why Tailscale alongside WireGuard?** Apartment internet (The Standard at Auburn) likely uses CGNAT — meaning you don't get a real public IP, and port forwarding for WireGuard is impossible. Tailscale works through CGNAT with zero router configuration. Install it on the M920q, Pi, phone, and laptop — instant encrypted access from anywhere. Keep WireGuard as a fallback for when you have a direct connection.
+**Why Tailscale alongside WireGuard?** Apartment internet (The Standard at Auburn) likely uses CGNAT — meaning you don't get a real public IP, and port forwarding for WireGuard is impossible. Tailscale works through CGNAT with zero router configuration. Install it on the M920q, phone, and laptop — instant encrypted access from anywhere. Keep WireGuard on the M920q as a fallback for when you have a direct connection.
 
 ### Ad Blocking Notes
 
@@ -472,7 +470,7 @@ All parts printed in **PETG** (heat resistance required near electronics). Desig
 
 Buy in this order to start learning while waiting for parts:
 
-1. **M920q + Pi 5** — start setting up Unraid and Pi OS
+1. **M920q** — start setting up Unraid
 2. **Rack + accessories** — shelves, patch panel, brush strip
 3. **ASM1166 + SATA cables + drives** — storage expansion
 4. **PDU + UPS** — power management (can skip initially to save budget)
@@ -493,9 +491,8 @@ Buy in this order to start learning while waiting for parts:
 4. Mount patch panel + brush strip at U3
 5. Place switch + JetKVM on 1U shelf at U4
 6. Mount M920q on 3D printed bracket at U5 — connect JetKVM via HDMI + USB
-7. Mount Pi 5 on SBC shelf at U6
-8. Mount HDD cage at U7-8
-9. Route all cables along rear rail, zip-tie
+7. Mount HDD cage at U6-7
+8. Route all cables along rear rail, zip-tie
 
 ### Phase 4: Storage Setup
 
@@ -509,25 +506,25 @@ Buy in this order to start learning while waiting for parts:
 1. Test wall ethernet port — plug laptop in, check for internet
 2. Run cable from wall port to rack patch panel
 3. Connect switch to patch panel, connect all devices to switch
-4. Set static DHCP leases in router (M920q = .50, Pi = .51)
-5. Set router DNS to Pi's IP for network-wide ad blocking
+4. Set static DHCP lease in router (M920q = .50)
+5. Set router DNS to M920q's IP for network-wide ad blocking
 
 ### Phase 6: Software Deployment
 
 See [docs/software-setup.md](docs/software-setup.md) for detailed container configuration.
 
 **Quick start order:**
-1. Tailscale on M920q + Pi (remote access — do this first so you can manage remotely)
+1. Tailscale (remote access — do this first so you can manage remotely)
 2. Jellyfin (verify transcoding works)
-3. AdGuard Home on Pi
+3. AdGuard Home (network-wide ad blocking)
 4. Prowlarr + Flaresolverr + Sonarr + Radarr + qBittorrent (media pipeline)
 5. Bazarr (subtitles)
 6. Nginx Proxy Manager (clean URLs for all services)
 7. Homepage (dashboard)
 8. Scrutiny (drive health monitoring)
 9. Watchtower (auto-updates)
-10. WireGuard on Pi (backup VPN)
-11. Uptime Kuma on Pi (monitoring)
+10. WireGuard (backup VPN)
+11. Uptime Kuma (monitoring)
 12. Immich (photo backup)
 
 ---
@@ -547,15 +544,7 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | SATA cables 18" (3-pack) | ~$8 | Cable Matters |
 | ~~SanDisk 16GB USB~~ | — | Replaced by Samsung FIT Plus in cables section |
 
-### Raspberry Pi 5 (~$146-150)
-
-| Component | Price |
-|---|---|
-| Raspberry Pi 5 8GB | $125 |
-| Official 27W USB-C PSU | $13 |
-| SanDisk 64GB microSD | ~$8-12 |
-
-### Rack & Accessories (~$563-596)
+### Rack & Accessories (~$547-580)
 
 | Component | Price |
 |---|---|
@@ -566,7 +555,6 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | Tupavco TP1713 PDU | $60 |
 | TP-Link TL-SG108 switch | $18 |
 | GeeekPi 1U shelf (switch) | ~$17 |
-| GeeekPi SBC shelf (Pi 5) | ~$16 |
 | GeeekPi 12-port patch panel | ~$16 |
 | GeeekPi brush strip | ~$11 |
 
@@ -612,13 +600,12 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 | Category | Subtotal |
 |---|---|
 | Core compute & storage | ~$535-595 |
-| Raspberry Pi 5 | ~$146-150 |
-| Rack & accessories | ~$563-596 |
+| Rack & accessories | ~$547-580 |
 | Cooling & monitoring | ~$30 |
 | Cables & small parts | ~$72 |
 | 3D prints | ~$24 |
 | Software | $49 + $5/mo |
-| **Grand total** | **~$1,370-1,520** |
+| **Grand total** | **~$1,208-1,350** |
 
 <details>
 <summary>Ways to hit ~$1,000</summary>
@@ -627,7 +614,7 @@ See [docs/software-setup.md](docs/software-setup.md) for detailed container conf
 2. **Skip the PDU** (-$60) — use a $10 power strip outside the rack
 3. **Find a cheaper M920q** — 8GB units run ~$130-150, add RAM later
 4. **Skip the UPS initially** (-$100) — add after confirming stable apartment power
-5. All four = **saves ~$360**, bringing total to **~$870-1,020**
+5. All four = **saves ~$360**, bringing total to **~$710-850**
 
 </details>
 
@@ -646,10 +633,8 @@ All components verified against the T2's **260mm depth** and **210mm safe width*
 | JetKVM | 43 x 60 x 31 | Shares U4 | Yes | On shelf next to switch |
 | Tupavco TP1713 PDU | 254 x 44 x 44 | 1U | Yes (tight) | Native rack ears |
 | Tripp Lite BC600R | 262 x 180 x 58 | 0U | Floor | Below rails |
-| GeeekPi SBC Shelf | 254 x 200 x 44 | 1U | Yes | Native rack ears |
 | 3D Printed HDD Mount | ~236 x ~200 x ~90 | ~2U | Yes | 3D printed ears |
 | WD Red Plus 4TB | 101.6 x 147 x 26.1 | In cage | Yes | M3 screws + grommets |
-| Raspberry Pi 5 | 56 x 85 x 17 | On shelf | Yes | SBC shelf |
 
 ---
 
